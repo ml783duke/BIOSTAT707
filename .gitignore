@@ -1,2 +1,6 @@
 data/
-.DS_Store
+output/*
+!output/checkpoint1.html
+.pixi/
+.ipynb_checkpoints/
+__pycache__/
