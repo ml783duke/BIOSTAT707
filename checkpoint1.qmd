@@ -58,6 +58,8 @@ The long table retains original time, numeric hours after admission, parameter, 
 long <- readr::read_csv(file.path(out_dir, "set-a_long.csv"), show_col_types = FALSE)
 wide <- readr::read_csv(file.path(out_dir, "set-a_wide.csv"), show_col_types = FALSE)
 data.frame(metric = c("long rows", "unique admissions", "variables", "time minimum", "time maximum", "wide rows"), value = c(nrow(long), dplyr::n_distinct(long$RecordID), dplyr::n_distinct(long$Parameter), min(long$time_hours), max(long$time_hours), nrow(wide))) |> knitr::kable(caption = "Derived-table checks")
+quality <- readr::read_csv(file.path(out_dir, "data_quality_summary.csv"), show_col_types = FALSE)
+knitr::kable(quality, caption = "Data-quality checks")
 ```
 
 ## Missingness maps
@@ -69,6 +71,8 @@ In an event-style long table, no row for a variable and interval represents no o
 #| fig-width: 10
 #| fig-height: 7
 knitr::include_graphics(c(file.path(out_dir, "figures", "long_missingness_map.png"), file.path(out_dir, "figures", "variable_time_measurement_rate.png"), file.path(out_dir, "figures", "wide_missingness_map.png")))
+informative <- readr::read_csv(file.path(out_dir, "missingness_by_outcome.csv"), show_col_types = FALSE)
+knitr::kable(head(informative[order(-informative$never_measured_n), ], 20), caption = "Death rate by whether a variable was ever measured")
 ```
 
 ## Modeling objective and AI-use statement

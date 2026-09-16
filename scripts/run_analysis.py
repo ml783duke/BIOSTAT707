@@ -43,6 +43,14 @@ outcomes['RecordID'] = outcomes['RecordID'].astype(int)
 assert long['RecordID'].nunique() == 4000
 assert set(long['RecordID']) == set(outcomes['RecordID'])
 
+quality = pd.DataFrame([
+    {'check': 'Raw -1 missing code', 'count': int((long.value_raw == '-1').sum())},
+    {'check': 'Other negative values', 'count': int((long.value < 0).sum())},
+    {'check': 'Times outside 0-48 hours', 'count': int(((long.time_hours < 0) | (long.time_hours > 48)).sum())},
+    {'check': 'Duplicate RecordID-Parameter-Time rows', 'count': int(long.duplicated(['RecordID', 'Parameter', 'Time']).sum())},
+])
+quality.to_csv(OUT / 'data_quality_summary.csv', index=False)
+
 static_names = ['Age', 'Gender', 'Height', 'ICUType', 'Weight']
 static = (long[long.Parameter.isin(static_names)].sort_values(['RecordID', 'Parameter', 'time_hours'])
           .drop_duplicates(['RecordID', 'Parameter']).pivot(index='RecordID', columns='Parameter', values='value').reset_index())
@@ -77,4 +85,8 @@ top = long.groupby('Parameter').RecordID.nunique().nlargest(25).index
 fig, ax = plt.subplots(figsize=(14, 7)); sns.heatmap(rate[rate.Parameter.isin(top)].pivot(index='Parameter', columns='time_bin', values='measured'), vmin=0, vmax=1, cmap='viridis', ax=ax); ax.set(title='Proportion of admissions measured by variable and six-hour interval', xlabel='Time after admission', ylabel='Variable'); fig.tight_layout(); fig.savefig(FIG / 'variable_time_measurement_rate.png', dpi=160); plt.close(fig)
 wide.isna().mean().sort_values(ascending=False).rename('missing_proportion').to_csv(OUT / 'wide_missingness_summary.csv')
 fig, ax = plt.subplots(figsize=(16, 7)); sns.heatmap(wide.drop(columns='RecordID').isna().iloc[:, :80], cmap=['#2166ac', '#f7f7f7'], cbar=False, ax=ax); ax.set(title='Wide-table missingness map (first 80 features)', xlabel='Feature', ylabel='Admission'); fig.tight_layout(); fig.savefig(FIG / 'wide_missingness_map.png', dpi=160); plt.close(fig)
+ever = long.assign(measured=long.value.notna()).groupby(['RecordID', 'Parameter']).measured.any().reset_index()
+ever['death'] = ever.RecordID.map(outcomes.set_index('RecordID')['In-hospital_death'])
+informative = ever.groupby('Parameter').apply(lambda x: pd.Series({'measured_n': int(x.measured.sum()), 'never_measured_n': int((~x.measured).sum()), 'death_rate_measured': x.loc[x.measured, 'death'].mean(), 'death_rate_never_measured': x.loc[~x.measured, 'death'].mean()}), include_groups=False).reset_index()
+informative.to_csv(OUT / 'missingness_by_outcome.csv', index=False)
 print({'files': len(files), 'long_rows': len(long), 'records': long.RecordID.nunique(), 'variables': long.Parameter.nunique(), 'time_min': long.time_hours.min(), 'time_max': long.time_hours.max(), 'death_n': int(outcomes['In-hospital_death'].sum())})
