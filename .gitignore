@@ -2,5 +2,5 @@ data/
 output/*
 !output/checkpoint1.html
 .pixi/
-checkpoint1_files/
-.Rhistory
+.ipynb_checkpoints/
+__pycache__/
