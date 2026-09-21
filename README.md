@@ -4,4 +4,4 @@ This repository contains a reproducible Python/Jupyter analysis of the [PhysioNe
 
 From the repository root, run `pixi install`, then `pixi run --locked checkpoint1`. The task executes `checkpoint1.ipynb` and generates `output/checkpoint1.html`, `output/set-a_long.csv`, `output/set-a_wide.csv`, summary CSVs, and figures under `output/figures/`. The notebook is the sole execution entry point and calls `scripts/run_analysis.py` for the data processing. Use relative project paths; run the task from the repository root.
 
-The locked environment uses Python 3.12 and package versions recorded in `pixi.lock`. Open `output/checkpoint1.html` to review the rendered report. Before submitting, review the code and results yourself, update the AI-use statement to reflect your actual checks, and commit only the intended files; raw data and most generated outputs remain untracked by design.
+The locked environment uses Python 3.12 and package versions recorded in `pixi.lock`. Open `output/checkpoint1.html` to review the rendered report.
