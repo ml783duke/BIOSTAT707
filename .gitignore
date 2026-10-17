@@ -1,6 +1,11 @@
 data/
 output/*
 !output/checkpoint1.html
+!output/checkpoint2.html
+!output/cp2_final_model.joblib
+!output/cp2_oof_predictions.csv
 .pixi/
 .ipynb_checkpoints/
 __pycache__/
+.DS_Store
+.Rhistory

@@ -1,7 +1,7 @@
 [workspace]
-name = "biostat707-checkpoint1"
+name = "biostat707-checkpoints"
 channels = [ "conda-forge" ]
-platforms = [ "linux-64" , "osx-arm64" , "osx-64" , "win-64" ]
+platforms = [ "linux-64", "osx-arm64", "osx-64", "win-64" ]
 
 [dependencies]
 python = "3.12.*"
@@ -17,9 +17,12 @@ missingno = "*"
 tableone = "*"
 statsmodels = "*"
 scipy = "*"
+scikit-learn = "*"
+joblib = "*"
 r-base = "4.5.*"
 "r-data.table" = "*"
 
 [tasks]
 checkpoint1 = "jupyter nbconvert --to html --execute checkpoint1.ipynb --output-dir output --ExecutePreprocessor.timeout=1800"
+checkpoint2 = "jupyter nbconvert --to html --execute checkpoint2.ipynb --output-dir output --ExecutePreprocessor.timeout=1800"
 lab = "jupyter lab"

@@ -65,7 +65,8 @@ fio2_invalid = long.Parameter.eq("FiO2") & ~raw_numeric.between(0, 1) & ~minus_o
 gender_invalid = long.Parameter.eq("Gender") & ~raw_numeric.isin([0, 1]) & ~minus_one
 icu_invalid = long.Parameter.eq("ICUType") & ~raw_numeric.isin([1, 2, 3, 4]) & ~minus_one
 vent_invalid = long.Parameter.eq("MechVent") & ~raw_numeric.isin([0, 1]) & ~minus_one
-documented_invalid = negative_invalid | ph_invalid | gcs_invalid | fio2_invalid | gender_invalid | icu_invalid | vent_invalid
+zero_height_weight = long.Parameter.isin(["Height", "Weight"]) & raw_numeric.eq(0)
+documented_invalid = negative_invalid | ph_invalid | gcs_invalid | fio2_invalid | gender_invalid | icu_invalid | vent_invalid | zero_height_weight
 long.loc[documented_invalid, "value"] = np.nan
 long.to_csv(OUT / "set-a_long.csv", index=False)
 outcomes_raw = pd.read_csv(DATA / "Outcomes-a.txt")
@@ -81,13 +82,14 @@ quality = pd.DataFrame([
     ("Other negative values", int(negative_invalid.sum())),
     ("pH values outside documented 0-14 range", int(ph_invalid.sum())),
     ("Other documented-range violations", int((gcs_invalid | fio2_invalid | gender_invalid | icu_invalid | vent_invalid).sum())),
+    ("Zero Height or Weight values", int(zero_height_weight.sum())),
     ("Times outside 0-48 hours", int((~long.time_hours.between(0, 48)).sum())),
     ("Rows in duplicate ID-variable-time groups", int(duplicate.sum())),
     ("Unmatched outcome IDs", int((~outcomes_raw.RecordID.isin(source_ids)).sum())),
 ], columns=["check", "count"])
 quality.to_csv(OUT / "data_quality_summary.csv", index=False)
 variable = long.groupby("Parameter").agg(rows=("value", "size"), measured_n=("value", "count"), minimum=("value", "min"), maximum=("value", "max")).reset_index()
-for label, mask in [("minus_one_n", minus_one), ("negative_n", negative_invalid), ("documented_invalid_n", documented_invalid), ("duplicate_rows_n", duplicate)]:
+for label, mask in [("minus_one_n", minus_one), ("negative_n", negative_invalid), ("zero_height_weight_n", zero_height_weight), ("documented_invalid_n", documented_invalid), ("duplicate_rows_n", duplicate)]:
     variable[label] = variable.Parameter.map(long.loc[mask, "Parameter"].value_counts()).fillna(0).astype(int)
 measured_ids = long[long.value.notna()].groupby("Parameter").RecordID.nunique()
 variable["admissions_measured_pct"] = 100 * variable.Parameter.map(measured_ids).fillna(0) / 4000
@@ -102,6 +104,7 @@ decision_rows = [
     ("Negative value other than -1", affected(negative_invalid), int(negative_invalid.sum()), "Set numeric value to missing; retain value_raw", "PhysioNet states that all valid values are non-negative."),
     ("pH outside documented 0-14 scale", affected(ph_invalid), int(ph_invalid.sum()), "Set numeric value to missing; retain value_raw", "PhysioNet documents arterial pH on a 0-14 scale."),
     ("Other documented-range or code violation", affected(gcs_invalid | fio2_invalid | gender_invalid | icu_invalid | vent_invalid), int((gcs_invalid | fio2_invalid | gender_invalid | icu_invalid | vent_invalid).sum()), "Set numeric value to missing if present", "PhysioNet documents the allowed scales or category codes."),
+    ("Zero Height or Weight", affected(zero_height_weight), int(zero_height_weight.sum()), "Set numeric value to missing; retain value_raw", "A zero height or weight is not a plausible physiological measurement and is treated as a missing-value code."),
     ("Repeated RecordID-variable-time key", affected(duplicate), int(duplicate.sum()), "Retain for this checkpoint and report", "The source notes that measurements from different methods or sensors may share timestamps; the key alone cannot prove duplication."),
     ("Extreme but not documentation-invalid values", "Examples: Height 1.8-431.8 cm; Urine up to 11000 mL; HR up to 300 bpm", np.nan, "Retain and flag for sensitivity analysis", "PhysioNet warns that occasional outliers are expected; no unverified clinical cutoff is imposed."),
 ]
