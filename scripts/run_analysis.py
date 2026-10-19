@@ -10,6 +10,8 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import seaborn as sns
 
+from modeling_table import STATIC_NAMES, build_modeling_table, clean_measurements
+
 ROOT = Path.cwd()
 DATA = ROOT / "data"
 OUT = ROOT / "output"
@@ -56,18 +58,18 @@ pd.DataFrame(failures, columns=["file", "error"]).to_csv(OUT / "read_failures.cs
 assert not failures, f"Read failures: {failures[:3]}"
 assert len(source_ids) == len(set(source_ids)) == 4000
 long = pd.DataFrame(rows, columns=["RecordID", "Time", "time_hours", "Parameter", "value_raw", "value"])
-raw_numeric = pd.to_numeric(long["value_raw"], errors="coerce")
-minus_one = long.value_raw.eq("-1")
-negative_invalid = raw_numeric.lt(0) & ~minus_one
-ph_invalid = long.Parameter.eq("pH") & ~raw_numeric.between(0, 14) & ~minus_one
-gcs_invalid = long.Parameter.eq("GCS") & ~raw_numeric.between(3, 15) & ~minus_one
-fio2_invalid = long.Parameter.eq("FiO2") & ~raw_numeric.between(0, 1) & ~minus_one
-gender_invalid = long.Parameter.eq("Gender") & ~raw_numeric.isin([0, 1]) & ~minus_one
-icu_invalid = long.Parameter.eq("ICUType") & ~raw_numeric.isin([1, 2, 3, 4]) & ~minus_one
-vent_invalid = long.Parameter.eq("MechVent") & ~raw_numeric.isin([0, 1]) & ~minus_one
-zero_height_weight = long.Parameter.isin(["Height", "Weight"]) & raw_numeric.eq(0)
-documented_invalid = negative_invalid | ph_invalid | gcs_invalid | fio2_invalid | gender_invalid | icu_invalid | vent_invalid | zero_height_weight
-long.loc[documented_invalid, "value"] = np.nan
+long, cleaning_masks = clean_measurements(long)
+raw_numeric = cleaning_masks["raw_numeric"]
+minus_one = cleaning_masks["minus_one"]
+negative_invalid = cleaning_masks["negative_invalid"]
+ph_invalid = cleaning_masks["ph_invalid"]
+gcs_invalid = cleaning_masks["gcs_invalid"]
+fio2_invalid = cleaning_masks["fio2_invalid"]
+gender_invalid = cleaning_masks["gender_invalid"]
+icu_invalid = cleaning_masks["icu_invalid"]
+vent_invalid = cleaning_masks["vent_invalid"]
+zero_height_weight = cleaning_masks["zero_height_weight"]
+documented_invalid = cleaning_masks["documented_invalid"]
 long.to_csv(OUT / "set-a_long.csv", index=False)
 outcomes_raw = pd.read_csv(DATA / "Outcomes-a.txt")
 assert not outcomes_raw.RecordID.duplicated().any()
@@ -110,17 +112,8 @@ decision_rows = [
 ]
 pd.DataFrame(decision_rows, columns=["issue", "affected_variables", "affected_rows", "decision", "rationale"]).to_csv(OUT / "anomaly_decisions.csv", index=False)
 
-static_names = ["Age", "Gender", "Height", "ICUType", "Weight"]
-static = (long[long.Parameter.isin(static_names)].sort_values(["RecordID", "Parameter", "time_hours"])
-          .drop_duplicates(["RecordID", "Parameter"]).pivot(index="RecordID", columns="Parameter", values="value")
-          .reindex(source_ids).rename_axis("RecordID").reset_index())
-dynamic = long[~long.Parameter.isin(static_names + ["RecordID"])].sort_values(["RecordID", "Parameter", "time_hours"])
-summary = dynamic.groupby(["RecordID", "Parameter"])["value"].agg(["count", "first", "last", "min", "max", "mean"])
-features = summary.unstack("Parameter")
-features.columns = [f"{parameter}_{stat}" for stat, parameter in features.columns]
-for parameter in dynamic.Parameter.unique():
-    features[f"{parameter}_count"] = features[f"{parameter}_count"].fillna(0).astype(int)
-wide = static.merge(features.reset_index(), on="RecordID", how="left", validate="one_to_one")
+dynamic = long[~long.Parameter.isin(STATIC_NAMES + ["RecordID"])].sort_values(["RecordID", "Parameter", "time_hours"])
+wide = build_modeling_table(long, source_ids)
 wide = wide.merge(outcomes, on="RecordID", how="left", validate="one_to_one")
 assert len(wide) == 4000 and not wide.RecordID.duplicated().any()
 assert wide["In-hospital_death"].notna().all()

@@ -1,0 +1,4 @@
+estimate,auroc,uncertainty_type,uncertainty
+Checkpoint 2 set-a nested CV,0.8426067628577882,fold SD,0.017813856273013
+set-b external validation,0.864926520076168,bootstrap 95% CI,0.850–0.880
+set-c external validation,0.8678174469096871,bootstrap 95% CI,0.854–0.882

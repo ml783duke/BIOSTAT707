@@ -1,0 +1,2 @@
+proposed_use,dataset,threshold,sensitivity,positive_predictive_value,flagged_per_100,challenge_event_1_score
+Flag for clinician review and possible goals-of-care conversation,set-b,0.3,0.5580985915492958,0.5179738562091504,15.299999999999999,0.5179738562091504

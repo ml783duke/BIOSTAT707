@@ -1,0 +1,2 @@
+model,training_set,validation_sets,threshold,threshold_source,model_parameters,outcome_access_rule
+Elastic net logistic,set-a,set-b; set-c,0.3,set-a out-of-fold predictions only,"{""model__C"": 0.1, ""model__l1_ratio"": 0.9}",Outcomes-b/c loaded only after locked predictions were saved
